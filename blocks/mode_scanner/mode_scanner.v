@@ -1,5 +1,3 @@
-// SIMULATION COPY. The real design is src/mode_scanner.v in the project "tt4 block: scanner",
-// which is hardened into the macro in macros/mode_scanner. Keep the two the same.
 /*
  * Design 2: a Knight Rider scanner. A block of lit LEDs bounces from one end of the row to the other.
  *

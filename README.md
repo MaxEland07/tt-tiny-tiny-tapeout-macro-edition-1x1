@@ -1,42 +1,53 @@
-![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
+![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg)
 
-# Tiny Tapeout Verilog Project Template
+# Tiny Tiny Tapeout: macro edition (1x1)
 
-- [Read the documentation for project](docs/info.md)
+Four little designs on one Tiny Tapeout tile (sky130, 161 x 111.52 um). Each design is hardened on its own as a macro, and the tile places the four macros and wires them to the pins. Two switches pick which one is live.
 
-## What is Tiny Tapeout?
+- [Project documentation](docs/info.md): what it does and how to test it on the demo board.
 
-Tiny Tapeout is an educational project that aims to make it easier and cheaper than ever to get your digital and analog designs manufactured on a real chip.
+| ui[1:0] | Design | Macro | Size (um) |
+| --- | --- | --- | --- |
+| 00 | 8-bit up/down counter | `mode_counter` | 45 x 55 |
+| 01 | Random LEDs (LFSR) | `mode_lfsr` | 36 x 36 |
+| 10 | Knight Rider scanner | `mode_scanner` | 42 x 42 |
+| 11 | Tiny synth, plays a tune | `mode_synth` | 55 x 55 |
 
-To learn more and get started, visit https://tinytapeout.com.
+## Where things are
 
-## Set up your Verilog project
+| Path | What |
+| --- | --- |
+| `src/project.v` | The tile: input synchronisers, the tick, the output multiplexer and the four macro instances. The only Tiny Tapeout source file. |
+| `src/config.json` | LibreLane settings for the tile. The macro settings are above the "DO NOT CHANGE" line; below it is the stock Tiny Tapeout block. |
+| `src/macros/<name>/` | The hardened macros: GDS, LEF, netlists, timing libraries and SPEF. |
+| `blocks/<name>/` | What each macro was made from: its Verilog, LibreLane config and power grid script. |
+| `test/` | cocotb tests for the whole tile, at RTL and at gate level. |
 
-1. Add your Verilog files to the `src` folder.
-2. Edit the [info.yaml](info.yaml) and update information about your project, paying special attention to the `source_files` and `top_module` properties. If you are upgrading an existing Tiny Tapeout project, check out our [online info.yaml migration tool](https://tinytapeout.github.io/tt-yaml-upgrade-tool/).
-3. Edit [docs/info.md](docs/info.md) and add a description of your project.
-4. Adapt the testbench to your design. See [test/README.md](test/README.md) for more information.
+## How the macros get power
 
-The GitHub action will automatically build the ASIC files using [LibreLane](https://www.zerotoasiccourse.com/terminology/librelane/).
+A Tiny Tapeout tile may only use met1 to met4, and its power comes down vertical met4 straps. So the macros stop one layer lower: they route on met1 to met3 and have their VPWR and VGND pins as horizontal met3 straps (`blocks/<name>/pdn_cfg.tcl`). The tile's met4 straps run over the macros and connect to those pins with vias. Nothing uses met5.
 
-## Enable GitHub actions to build the results page
+In `src/config.json`, `FP_PDN_HORIZONTAL_LAYER` is set to met3 so the tile's power grid looks for the macro pins there, and each macro is placed so that at least one VPWR and one VGND strap cross it.
 
-- [Enabling GitHub Pages](https://tinytapeout.com/faq/#my-github-action-is-failing-on-the-pages-part)
+## Rebuilding a macro
 
-## Resources
+The macros were hardened with LibreLane in Vulkos from the files in `blocks/`. To rebuild one:
 
-- [FAQ](https://tinytapeout.com/faq/)
-- [Digital design lessons](https://tinytapeout.com/digital_design/)
-- [Learn how semiconductors work](https://tinytapeout.com/siliwiz/)
-- [Join the community](https://tinytapeout.com/discord)
-- [Build your design locally](https://www.tinytapeout.com/guides/local-hardening/)
+```sh
+cd blocks/mode_counter
+librelane --dockerized config.json
+```
 
-## What next?
+Then copy from `runs/<tag>/final/` into `src/macros/mode_counter/`: `gds/`, `lef/`, `nl/`, `pnl/` as single files, `lib/<corner>/*.lib` as `lib/<corner>.lib`, and `spef/<corner>/*.spef` as `spef/<corner>.spef`. If the macro changes size, update its location in `src/config.json`.
 
-- [Submit your design to the next shuttle](https://app.tinytapeout.com/).
-- Edit [this README](README.md) and explain your design, how it works, and how to test it.
-- Share your project on your social network of choice:
-  - LinkedIn [#tinytapeout](https://www.linkedin.com/search/results/content/?keywords=%23tinytapeout) [@TinyTapeout](https://www.linkedin.com/company/100708654/)
-  - Mastodon [#tinytapeout](https://chaos.social/tags/tinytapeout) [@matthewvenn](https://chaos.social/@matthewvenn)
-  - X (formerly Twitter) [#tinytapeout](https://twitter.com/hashtag/tinytapeout) [@tinytapeout](https://twitter.com/tinytapeout)
-  - Bluesky [@tinytapeout.com](https://bsky.app/profile/tinytapeout.com)
+## Tests
+
+```sh
+cd test
+make -B              # RTL: the macros are simulated from blocks/
+make -B GATES=yes    # gate level: the tile's netlist plus the macros' netlists
+```
+
+The tests only touch the pins of the chip, so they say what a person with the demo board would see: the pin map, the two-clock input synchronisers, the tick speeds, each design's behaviour, that only the live design makes sound, that sleeping designs keep their state, and reset.
+
+At RTL the testbench makes one tick 1024 times shorter than on the chip. The gate level netlist is the chip itself, so it runs at the real tick length (32768 clocks at the fastest speed) and skips the two slowest speeds.

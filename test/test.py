@@ -1,22 +1,29 @@
 """
-cocotb tests for the whole tile, tt_um_tiny4: the glue logic and the four macros together.
+cocotb tests for the whole tile: the glue logic and the four macros together.
 
 The tests only touch the pins of the chip (ui_in, uio_in, uo_out, uio_out, uio_oe, rst_n), so
-they say what a person with the demo board would see. Each macro has its own, much longer, test
-in its block project. These tests check what only the tile can get wrong: the pin map, the input
-synchronisers, the tick speeds, which design is live, and that sleeping designs keep their state.
+they say what a person with the demo board would see. They check what only the tile can get
+wrong: the pin map, the input synchronisers, the tick speeds, which design is live, and that
+sleeping designs keep their state.
 
-The macros are hardened separately, so this project has no Verilog for them in src/. For
-simulation, tb/mode_*.v are copies of the Verilog in the four block projects.
+The same tests run two ways:
 
-Run in Vulkos: simulator cocotb, top module tb, test module test_tt_um_tiny4.
+  make             RTL. The macros are simulated from their Verilog in blocks/, and tb.v makes
+                   one tick 1024 times shorter than on the chip, so a run takes seconds.
+  GATES=yes make   Gate level. The tile's netlist plus the netlists of the four hardened macros,
+                   at the chip's real tick length. Ticks are 32768 clocks or more, so the tests
+                   use the fastest speed and skip the two slowest ones.
 """
+
+import os
 
 import cocotb
 from cocotb.triggers import FallingEdge, ValueChange, with_timeout
 from cocotb.utils import get_sim_time
 
-CLOCK_NS = 1000                       # 1 MHz, made in tb/tb.v
+CLOCK_NS = 1000                       # 1 MHz, made in tb.v
+GATES = os.environ.get("GATES") == "yes"
+SPEED = 3 if GATES else 2             # the tick speed the tests use unless they say otherwise
 COUNTER, RANDOM, SCANNER, SYNTH = range(4)
 
 # Notes of the synth (Hz) and its built-in tune, as in the mode_synth block project.
@@ -64,7 +71,7 @@ async def reset(dut):
     dut.rst_n.value = 1
 
 
-async def switches(dut, design, speed=2, data=0, a=0, b=0):
+async def switches(dut, design, speed=SPEED, data=0, a=0, b=0):
     """Set the switches and buttons, then wait 4 clocks for them to pass the synchronisers.
 
     Call it straight after reset() or tick(), so that no tick lands inside those 4 clocks.
@@ -158,17 +165,18 @@ async def four_tick_speeds(dut):
     """Each speed step is 4 times faster, and the heartbeat flips once per tick."""
     await reset(dut)
     period = {}
-    for speed in (3, 2, 1, 0):
+    speeds = (3, 2) if GATES else (3, 2, 1, 0)
+    for speed in speeds:
         await switches(dut, COUNTER, speed=speed)
         await tick(dut)
         t0 = get_sim_time("ns")
         await tick(dut)
         period[speed] = round((get_sim_time("ns") - t0) / CLOCK_NS)
         dut._log.info(f"speed {speed}: one tick every {period[speed]} clocks, {1e6 / period[speed]:.2f} per second at 1 MHz")
-    assert period[3] in (2**5, 2**15), f"fastest tick is {period[3]} clocks, expected 32 (test) or 32768 (chip)"
-    assert period[2] == 4 * period[3]
-    assert period[1] == 16 * period[3]
-    assert period[0] == 64 * period[3]
+    want = 2**15 if GATES else 2**5
+    assert period[3] == want, f"fastest tick is {period[3]} clocks, expected {want}"
+    for speed in speeds:
+        assert period[speed] == 4 ** (3 - speed) * period[3]
 
 
 @cocotb.test()
@@ -298,9 +306,9 @@ async def synth_design(dut):
         await switches(dut, SYNTH, speed=0, data=note)
         assert await speaker_edges(dut, 50) == 0, "sound after button A was released"
     # Button B: the built-in tune, one note per tick. The switches no longer pick the note.
-    await switches(dut, SYNTH, speed=2, data=15)
+    await switches(dut, SYNTH, speed=SPEED, data=15)
     await tick(dut)
-    await switches(dut, SYNTH, speed=2, data=15, b=1)
+    await switches(dut, SYNTH, speed=SPEED, data=15, b=1)
     assert leds(dut) == bar(TUNE[0])
     assert await speaker_edges(dut, 60) == 0             # the first half wave of a C5 is 956 clocks
     for i in range(1, 21):

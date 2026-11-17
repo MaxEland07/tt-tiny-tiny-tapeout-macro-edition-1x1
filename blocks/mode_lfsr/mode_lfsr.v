@@ -1,5 +1,3 @@
-// SIMULATION COPY. The real design is src/mode_lfsr.v in the project "tt4 block: lfsr",
-// which is hardened into the macro in macros/mode_lfsr. Keep the two the same.
 /*
  * Design 1: a pseudo-random LED generator (an 8-bit linear feedback shift register).
  *

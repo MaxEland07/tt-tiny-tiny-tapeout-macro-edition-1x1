@@ -1,5 +1,3 @@
-// SIMULATION COPY. The real design is src/mode_counter.v in the project "tt4 block: counter",
-// which is hardened into the macro in macros/mode_counter. Keep the two the same.
 /*
  * Design 0: an 8-bit up/down counter you can watch on the LEDs.
  *

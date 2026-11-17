@@ -1,5 +1,3 @@
-// SIMULATION COPY. The real design is src/mode_synth.v in the project "tt4 block: synth",
-// which is hardened into the macro in macros/mode_synth. Keep the two the same.
 /*
  * Design 3: a tiny synthesiser. It makes a square wave on the speaker pin.
  *

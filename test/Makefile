@@ -6,13 +6,18 @@ SIM ?= icarus
 FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
-PROJECT_SOURCES = project.v tb/mode_counter.v tb/mode_lfsr.v tb/mode_scanner.v tb/mode_synth.v tb/tb.v
+PROJECT_SOURCES = project.v
+
+# The four designs are hardened macros, so they are not Tiny Tapeout source files (info.yaml).
+# RTL simulation uses their Verilog from blocks/, gate level simulation the netlists of the macros.
+MACROS = mode_counter mode_lfsr mode_scanner mode_synth
 
 ifneq ($(GATES),yes)
 
 # RTL simulation:
 SIM_BUILD				= sim_build/rtl
 VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(PROJECT_SOURCES))
+VERILOG_SOURCES += $(foreach m,$(MACROS),$(PWD)/../blocks/$(m)/$(m).v)
 
 else
 
@@ -23,11 +28,14 @@ COMPILE_ARGS    += -DFUNCTIONAL
 COMPILE_ARGS    += -DUSE_POWER_PINS
 COMPILE_ARGS    += -DSIM
 COMPILE_ARGS    += -DUNIT_DELAY=\#1
-VERILOG_SOURCES += $(PDK_ROOT)/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/verilog/primitives.v
-VERILOG_SOURCES += $(PDK_ROOT)/gf180mcuD/libs.ref/gf180mcu_fd_sc_mcu7t5v0/verilog/gf180mcu_fd_sc_mcu7t5v0.v
+VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
+VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
 
 # this gets copied in by the GDS action workflow
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
+
+# the tile's netlist only instantiates the macros, so add their own netlists (with power pins)
+VERILOG_SOURCES += $(foreach m,$(MACROS),$(SRC_DIR)/macros/$(m)/$(m).pnl.v)
 
 endif
 
