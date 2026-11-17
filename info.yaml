@@ -1,56 +1,61 @@
 # Tiny Tapeout project information
 project:
-  title:        ""      # Project title
-  author:       ""      # Your name
+  title:        "Tiny Tiny Tapeout: macro edition (1x1)"      # Project title
+  author:       "Max Eland"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  ""      # One line description of what your project does
+  description:  "Four little designs on one tile, each a hardened macro: an 8-bit up/down counter, random LEDs, a Knight Rider scanner and a tiny synth that plays a tune. Two switches pick which one is live."      # One line description of what your project does
   language:     "Verilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
-  clock_hz:     0       # Clock frequency in Hz (or 0 if not applicable)
+  clock_hz:     1000000       # Clock frequency in Hz (or 0 if not applicable)
 
   # How many tiles your design occupies? A single tile is about 340x160 uM.
   tiles: "1x1"          # Valid values: 1x1, 1x2, 2x2, 3x2, 4x2, 3x4 or 4x4
 
   # Your top module name must start with "tt_um_". Make it unique by including your github username:
-  top_module:  "tt_um_example"
+  top_module:  "tt_um_maxeland07_tiny_tiny_tapeout_macro_edition_1x1"
 
   # List your project's source files here.
   # Source files must be in ./src and you must list each source file separately, one per line.
   # Don't forget to also update `PROJECT_SOURCES` in test/Makefile.
   source_files:
     - "project.v"
+    - "tb/mode_counter.v"
+    - "tb/mode_lfsr.v"
+    - "tb/mode_scanner.v"
+    - "tb/mode_synth.v"
+    - "tb/tb.v"
 
 # The pinout of your project. Leave unused pins blank. DO NOT delete or add any pins.
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
-  ui[5]: ""
-  ui[6]: ""
-  ui[7]: ""
+  ui[0]: "design select, bit 0"
+  ui[1]: "design select, bit 1"
+  ui[2]: "speed, bit 0"
+  ui[3]: "speed, bit 1"
+  ui[4]: "data 0: count down / seed 0 / width 0 / note 0"
+  ui[5]: "data 1: hold / seed 1 / width 1 / note 1"
+  ui[6]: "data 2: Gray code / seed 2 / split / note 2"
+  ui[7]: "data 3: count in 3s / seed 3 / invert / note 3"
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
-  uo[7]: ""
+  uo[0]: "LED 0"
+  uo[1]: "LED 1"
+  uo[2]: "LED 2"
+  uo[3]: "LED 3"
+  uo[4]: "LED 4"
+  uo[5]: "LED 5"
+  uo[6]: "LED 6"
+  uo[7]: "LED 7"
 
   # Bidirectional pins
-  uio[0]: ""
-  uio[1]: ""
-  uio[2]: ""
-  uio[3]: ""
-  uio[4]: ""
-  uio[5]: ""
-  uio[6]: ""
-  uio[7]: ""
+  uio[0]: "button A (in): clear / reseed / reverse / play note"
+  uio[1]: "button B (in): set all / freeze / pause / play tune"
+  uio[2]: "LED: counter is live"
+  uio[3]: "LED: random LEDs are live"
+  uio[4]: "LED: scanner is live"
+  uio[5]: "LED: synth is live"
+  uio[6]: "heartbeat LED, flips on every tick"
+  uio[7]: "speaker"
 
 # Do not change!
 yaml_version: 6
